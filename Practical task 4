@@ -1,0 +1,126 @@
+Easy level 
+
+To solve this, it is enough to use the shortcut $x() in the Chrome developer console to execute XPath queries.
+
+1. Find the first h1 element on the main page.
+
+$x("//h1")[0]
+
+2. Find all images that have an 'alt' attribute.
+
+$x("//img[@alt]")
+
+3. Find the button with the text "Start forming a habit!".
+
+$x("//button[text()='Start forming a habit!']")[0]
+
+4. Check for the presence of a search icon on the webpage.
+
+$x("//*[contains(@class, 'search')]")
+
+5. $x("//*[contains(@class, 'checkbox')]")
+
+Medium level
+To solve this, it is necessary to use JavaScript and the method document.evaluate() in the Chrome developer console to execute XPath queries.
+
+Task 1
+To find the first h1 element on the main page.
+
+var result = document.evaluate("//h1", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+result
+
+Task 2
+
+Find all images that have the 'alt' attribute. Output the message in the console "Found (number) images with the alt attribute."
+
+var images = document.evaluate("//img[@alt]", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+console.log("Found " + images.snapshotLength + " images with the alt attribute.");
+
+Task 3
+
+Find the button element with the text "Start forming a habit!". If an element with such text is not found, display a corresponding message. Output the message with numbers of buttons in the console.
+
+*Check the accuracy of the number of buttons found. If you get an incorrect value, analyze why this happened. To do this, find the code for the required elements and, if necessary, modify your script.
+
+var buttons = document.evaluate("//button[text()='Start forming a habit!']", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+if (buttons.snapshotLength > 0) {
+    console.log("Found " + buttons.snapshotLength + " button with the text 'Start forming a habit!'.");
+} else {
+    console.log("No buttons found with the text 'Start forming a habit!'.");
+}
+
+Task 4
+
+Validate the presence and visibility of the site search icon on the webpage, and ensure the image associated with the search icon has the appropriate alt text and a source (src) path.
+
+var searchIcon = document.evaluate("//img[contains(@alt, 'search') or contains(@class, 'search')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+
+if (searchIcon) {
+    var visible = searchIcon.offsetParent !== null;
+    var hasSrc = searchIcon.src && searchIcon.src.trim() !== "";
+    var hasAlt = searchIcon.alt && searchIcon.alt.trim() !== "";
+    console.log("Search icon found.");
+    console.log("Visible: " + visible);
+    console.log("Has src: " + hasSrc);
+    console.log("Has alt: " + hasAlt);
+} else {
+    console.log("Search icon not found on the page.");
+}
+
+Task 5
+
+Log in to your profile at https://www.greencity.cx.ua/#/profile.
+Go to the profile editing page by clicking on the "Edit your profile" button.
+Locate the checkboxes at the bottom of the page.
+Check the state of each checkbox: determine whether they are checked or unchecked.
+Display a message with the number of checked and unchecked checkboxes.
+
+var checkboxes = document.querySelectorAll("input[type='checkbox']");
+var checked = 0;
+var unchecked = 0;
+
+checkboxes.forEach(function(cb){
+    if(cb.checked){
+        checked++;
+    } else {
+        unchecked++;
+    }
+});
+
+console.log("Checked checkboxes: " + checked);
+console.log("Unchecked checkboxes: " + unchecked);
+
+
+Hard level
+
+Task 6 *
+
+Validate the website's ability to switch languages effectively.
+
+Initiate a search to identify the user interface element designated for language toggling.
+If the specified element is successfully pinpointed, activate it to attempt a language change.
+Log the result in the console, specifying whether the language toggle element was detected.
+Should the language alteration succeed, log the preceding and new language settings into the console for verification purposes.
+
+var toggle = document.querySelector("li.lang-option[aria-label='english']");
+if(toggle){
+    toggle.click();
+    var checkInterval = setInterval(function(){
+        var uk = document.querySelector("li.lang-option[aria-label='Uk']");
+        if(uk){
+            clearInterval(checkInterval);
+            var heading = document.querySelector("h1"); // перевіряємо заголовок
+            var previousText = heading ? heading.innerText : "unknown";
+            uk.click();
+            setTimeout(function(){
+                var newText = heading ? heading.innerText : "unknown";
+                console.log("Previous heading text: " + previousText);
+                console.log("New heading text: " + newText);
+            }, 1000);
+        }
+    }, 200);
+} else {
+    console.log("Language toggle element not found.");
+}
+
+
