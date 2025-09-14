@@ -6,11 +6,11 @@ $$("img")
 
 2. Find images that are icons on the web.
 
-$$("img[class*='icon'], img[class*='Icon'], img[src*='icon'], img[src*='Icon']")
+$$("img[class*='icon' i], img[src*='icon' i], [class*='icon' i] svg, svg[class*='icon' i]")
 
 3. Find all button elements present on a specified web page
 
-$$("button, [role='button'], input[type='button'], input[type='submit']")
+$$("button, [role='button'], input[type='button'], input[type='submit'], input[type='reset'], input[type='image']")
 
 4. Find all input fields on a web page.
 
@@ -18,7 +18,8 @@ $$("input, textarea, select")
 
 5. Find the link that is responsible for going to the map to find a place to buy eco-bags.
 
-$$("a.tertiary-global-button.btn-link[href='#/places']").filter(a => a.textContent.trim() === "you can buy eco-bags here")
+$$("a.tertiary-global-button.btn-link[href='#/places']")
+  .filter(a => a.textContent.trim().toLowerCase() === "you can buy eco-bags here");
 
 Medium level
 
