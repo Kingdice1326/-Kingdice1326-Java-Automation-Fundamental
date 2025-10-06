@@ -1,0 +1,244 @@
+pom.xml
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.example</groupId>
+  <artifactId>selenium-tests</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <junit.jupiter.version>5.10.0</junit.jupiter.version>
+    <selenium.version>4.15.0</selenium.version>
+  </properties>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>${selenium.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.9</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.bonigarcia</groupId>
+      <artifactId>webdrivermanager</artifactId>
+      <version>5.5.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>2.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <source>17</source>
+          <target>17</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.1.2</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+
+
+SignIn.java
+
+package org.example;
+
+import org.openqa.selenium.Keys;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.time.Duration;
+
+public class SignIn {
+
+    private final WebDriverWait wait;
+
+    public SignIn(WebDriver driver) {
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+        PageFactory.initElements(driver, this);
+    }
+
+    @FindBy(css = "img.ubs-header-sing-in-img")
+    private WebElement signInButton;
+
+    @FindBy(css = "app-sign-in h1")
+    private WebElement welcomeText;
+
+    @FindBy(css = "#email")
+    private WebElement emailInput;
+
+    @FindBy(css = "#password")
+    private WebElement passwordInput;
+
+    @FindBy(css = "#email-err-msg div")
+    private WebElement errorEmail;
+
+    @FindBy(css = "#pass-err-msg div")
+    private WebElement errorPassword;
+
+    @FindBy(css = "button.greenStyle")
+    private WebElement signInSubmitButton;
+
+    public void clickSignInButton() {
+        wait.until(ExpectedConditions.elementToBeClickable(signInButton)).click();
+    }
+
+    public String getWelcomeText() {
+        return wait.until(ExpectedConditions.visibilityOf(welcomeText)).getText();
+    }
+
+    public void enterEmail(String email) {
+        wait.until(ExpectedConditions.visibilityOf(emailInput)).click();
+        emailInput.clear();
+        emailInput.sendKeys(email);
+    }
+
+    public void enterPassword(String password) {
+        wait.until(ExpectedConditions.visibilityOf(passwordInput)).click();
+        passwordInput.clear();
+        passwordInput.sendKeys(password);
+    }
+
+    public void pressEnterOnEmail() {
+        emailInput.sendKeys(Keys.ENTER);
+    }
+
+    public String getEmailError() {
+        return wait.until(ExpectedConditions.visibilityOf(errorEmail)).getText();
+    }
+
+    public String getPasswordError() {
+        return wait.until(ExpectedConditions.visibilityOf(errorPassword)).getText();
+    }
+
+    public void clickSubmit() {
+        wait.until(ExpectedConditions.elementToBeClickable(signInSubmitButton)).click();
+    }
+}
+
+
+SignInTest.java
+
+package org.example;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+public class SignInTest {
+
+    private WebDriver driver;
+    private SignIn signInPage;
+
+    @BeforeAll
+    public void setUp() {
+        WebDriverManager.chromedriver().setup();
+        driver = new ChromeDriver();
+        driver.manage().window().setSize(new Dimension(1264, 798));
+        driver.get("https://www.greencity.cx.ua/#/greenCity");
+        signInPage = new SignIn(driver);
+    }
+
+    @AfterAll
+    public void tearDown() {
+        driver.quit();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "wrongemail, short"
+    })
+    public void testSignInPositiveAfterNegative(String wrongEmail, String wrongPassword) throws InterruptedException {
+
+        signInPage.clickSignInButton();
+        Thread.sleep(1000); //тільки для презентацції
+
+        assertThat(signInPage.getWelcomeText(), is("Welcome back!"));
+        Thread.sleep(1000); //тільки для презентацції
+
+        signInPage.enterEmail(wrongEmail);
+        Thread.sleep(1000); //тільки для презентацції
+
+        signInPage.enterPassword(wrongPassword);
+        Thread.sleep(1000); //тільки для презентацції
+
+        signInPage.enterEmail("");
+        Thread.sleep(1000); //тільки для презентацції
+
+        signInPage.enterEmail(wrongEmail);
+        Thread.sleep(1000); //тільки для презентацції
+
+        assertThat(signInPage.getEmailError(), is("Please check that your e-mail address is indicated correctly"));
+        Thread.sleep(1000); //тільки для презентацції
+
+        assertThat(signInPage.getPasswordError(), is("Password have from 8 to 20 characters long without spaces and contain at least one uppercase letter (A-Z), one lowercase letter (a-z), a digit (0-9), and a special character (~`!@#$%^&*()+=_-{}[]|:;”’?/<>,.)"));
+        Thread.sleep(1000); //тільки для презентацції
+
+        signInPage.enterEmail("maxdivo9@gmail.com");
+        Thread.sleep(1000); //тільки для презентацції
+
+        signInPage.enterPassword("maxdivo9");
+        Thread.sleep(1000); //тільки для презентацції
+
+        signInPage.clickSubmit();
+    }
+}
