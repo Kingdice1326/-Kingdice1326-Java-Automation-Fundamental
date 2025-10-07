@@ -1,0 +1,195 @@
+pom.xml не змінився
+
+SignIn.jav
+
+package org.example;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.time.Duration;
+import java.util.List;
+
+public class SignIn {
+
+    private final WebDriver driver;
+    private final WebDriverWait wait;
+
+    public SignIn(WebDriver driver) {
+        this.driver = driver;
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        PageFactory.initElements(driver, this);
+    }
+
+    @FindBy(css = "img.ubs-header-sing-in-img")
+    private WebElement signInButton;
+
+    @FindBy(css = "app-sign-in h1")
+    private WebElement welcomeText;
+
+    @FindBy(css = "#email")
+    private WebElement emailInput;
+
+    @FindBy(css = "#password")
+    private WebElement passwordInput;
+
+    @FindBy(css = "#email-err-msg div")
+    private WebElement errorEmail;
+
+    @FindBy(css = "#pass-err-msg div")
+    private WebElement errorPassword;
+
+    @FindBy(css = "button.greenStyle")
+    private WebElement signInSubmitButton;
+
+    @FindBy(css = "li.user-name")
+    private WebElement userNameButton;
+
+    public void clickSignInButton() {
+        List<WebElement> closeButtons = driver.findElements(By.cssSelector("a.close-modal-window"));
+        if (!closeButtons.isEmpty()) {
+            closeButtons.get(0).click();
+            new WebDriverWait(driver, Duration.ofSeconds(2))
+                    .until(ExpectedConditions.invisibilityOf(closeButtons.get(0)));
+        }
+
+        wait.until(ExpectedConditions.elementToBeClickable(signInButton)).click();
+    }
+
+    public String getWelcomeText() {
+        return wait.until(ExpectedConditions.visibilityOf(welcomeText)).getText();
+    }
+
+    public void enterEmail(String email) {
+        wait.until(ExpectedConditions.visibilityOf(emailInput)).click();
+        emailInput.clear();
+        emailInput.sendKeys(email);
+    }
+
+    public void enterPassword(String password) {
+        wait.until(ExpectedConditions.visibilityOf(passwordInput)).click();
+        passwordInput.clear();
+        passwordInput.sendKeys(password);
+        emailInput.sendKeys(Keys.TAB);
+    }
+
+    public String getEmailError() {
+        return wait.until(ExpectedConditions.visibilityOf(errorEmail)).getText();
+    }
+
+    public String getPasswordError() {
+        return wait.until(ExpectedConditions.visibilityOf(errorPassword)).getText();
+    }
+
+    public void clickSubmit() {
+        wait.until(ExpectedConditions.elementToBeClickable(signInSubmitButton)).click();
+    }
+
+    public boolean isUserLoggedIn() {
+        try {
+            wait.until(ExpectedConditions.visibilityOf(userNameButton));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void signOut() {
+        WebElement userName = wait.until(ExpectedConditions.elementToBeClickable(userNameButton));
+        userName.click();
+
+        By signOutLi = By.cssSelector("li.drop-down-item[aria-label='sign-out']");
+        WebElement signOutElement = wait.until(ExpectedConditions.elementToBeClickable(signOutLi));
+
+        signOutElement.click();
+
+        wait.until(ExpectedConditions.visibilityOf(signInButton));
+    }
+}
+
+
+
+SignInTest.java
+
+package org.example;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvFileSource;
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class SignInTest {
+
+    private WebDriver driver;
+    private SignIn signInPage;
+
+    @BeforeAll
+    public void setUp() {
+        WebDriverManager.chromedriver().setup();
+        driver = new ChromeDriver();
+        driver.manage().window().setSize(new Dimension(1264, 798));
+        driver.get("https://www.greencity.cx.ua/#/greenCity");
+        signInPage = new SignIn(driver);
+    }
+
+    @AfterAll
+    public void tearDown() {
+        driver.quit();
+    }
+
+    // Negative test
+    @Order(1)
+    @ParameterizedTest
+    @CsvFileSource(resources = "/negative_logins.csv", numLinesToSkip = 1)
+    public void testNegativeLogin(String email, String password, String expectedEmailError, String expectedPasswordError) {
+        signInPage.clickSignInButton();
+
+        assertThat(signInPage.getWelcomeText(), is("Welcome back!"));
+
+        signInPage.enterEmail(email);
+        signInPage.enterPassword(password);
+        signInPage.enterEmail(email);
+
+        assertThat(signInPage.getEmailError(), containsString(expectedEmailError));
+        assertThat(signInPage.getPasswordError(), containsString(expectedPasswordError));
+
+        driver.navigate().refresh();
+    }
+
+    // Positive tests
+    @Order(2)
+    @ParameterizedTest
+    @CsvFileSource(resources = "/positive_logins.csv", numLinesToSkip = 1)
+    public void testPositiveLogin(String email, String password) {
+        signInPage.clickSignInButton();
+
+        assertThat(signInPage.getWelcomeText(), is("Welcome back!"));
+
+        signInPage.enterEmail(email);
+        signInPage.enterPassword(password);
+
+        signInPage.clickSubmit();
+
+        assertThat(signInPage.isUserLoggedIn(), is(true));
+
+        signInPage.signOut();
+
+        assertThat(signInPage.isUserLoggedIn(), is(false));
+
+        driver.navigate().refresh();
+    }
+}
