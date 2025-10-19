@@ -1,0 +1,368 @@
+pom.xml
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.example</groupId>
+  <artifactId>selenium-tests</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <junit.jupiter.version>5.10.0</junit.jupiter.version>
+    <selenium.version>4.15.0</selenium.version>
+  </properties>
+
+  <dependencies>
+    <!-- Selenium -->
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>${selenium.version}</version>
+    </dependency>
+
+    <!-- WebDriverManager -->
+    <dependency>
+      <groupId>io.github.bonigarcia</groupId>
+      <artifactId>webdrivermanager</artifactId>
+      <version>5.5.3</version>
+    </dependency>
+
+    <!-- JUnit 5 -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Hamcrest -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>2.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- SLF4J -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.9</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <source>17</source>
+          <target>17</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.1.2</version>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+
+
+SignIn.java (без змін)
+
+package org.example;
+
+import org.openqa.selenium.*;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import java.time.Duration;
+import java.util.List;
+
+public class SignIn {
+
+    private final WebDriver driver;
+    private final WebDriverWait wait;
+    private final JavascriptExecutor js;
+
+    private final By signInButtonBy = By.cssSelector("img.ubs-header-sing-in-img");
+    private final By welcomeTextBy = By.cssSelector("app-sign-in h1");
+    private final By emailBy = By.cssSelector("#email");
+    private final By passwordBy = By.cssSelector("#password");
+    private final By errorEmailBy = By.cssSelector("#email-err-msg div");
+    private final By errorPasswordBy = By.cssSelector("#pass-err-msg div");
+    private final By submitBy = By.cssSelector("button.ubsStyle[type='submit']");
+    private final By userNameBy = By.id("header_user-wrp");
+
+    public SignIn(WebDriver driver) {
+        this.driver = driver;
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.js = (JavascriptExecutor) driver;
+    }
+
+    private WebElement waitVisible(By locator) {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+    }
+
+    private WebElement waitClickable(By locator) {
+        return wait.until(ExpectedConditions.elementToBeClickable(locator));
+    }
+
+    private void jsClick(WebElement element) {
+        js.executeScript("arguments[0].click();", element);
+    }
+
+    public void clickSignInButton() {
+        List<WebElement> closeButtons = driver.findElements(By.cssSelector("a.close-modal-window"));
+        if (!closeButtons.isEmpty()) {
+            closeButtons.get(0).click();
+            new WebDriverWait(driver, Duration.ofSeconds(2))
+                    .until(ExpectedConditions.invisibilityOf(closeButtons.get(0)));
+        }
+        jsClick(waitClickable(signInButtonBy));
+    }
+
+    public String getWelcomeText() {
+        return waitVisible(welcomeTextBy).getText();
+    }
+
+    public void enterEmail(String email) {
+        WebElement input = waitVisible(emailBy);
+        jsClick(input);
+        input.clear();
+        input.sendKeys(email);
+    }
+
+    public void enterPassword(String password) {
+        WebElement input = waitVisible(passwordBy);
+        jsClick(input);
+        input.clear();
+        input.sendKeys(password);
+        waitVisible(emailBy).sendKeys(Keys.TAB);
+    }
+
+    public String getEmailError() {
+        return waitVisible(errorEmailBy).getText();
+    }
+
+    public String getPasswordError() {
+        return waitVisible(errorPasswordBy).getText();
+    }
+
+    public void clickSubmit() {
+        jsClick(waitClickable(submitBy));
+    }
+
+    public boolean isUserLoggedIn() {
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(3))
+                    .until(ExpectedConditions.visibilityOfElementLocated(userNameBy));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void signOut() {
+        WebElement userName = waitClickable(userNameBy);
+        try {
+            jsClick(userName);
+        } catch (Exception e) {
+            new Actions(driver).moveToElement(userName).click().perform();
+        }
+
+        By signOutLocator = By.cssSelector("li.drop-down-item[aria-label='sign-out']");
+        if (!attemptClickSignOut(signOutLocator, 8)) {
+            System.out.println("Retrying logout...");
+            try { jsClick(userName); } catch (Exception ignored) {}
+            attemptClickSignOut(signOutLocator, 8);
+        }
+    }
+
+    private boolean attemptClickSignOut(By signOutLocator, int waitSeconds) {
+        try {
+            WebElement signOutElement = new WebDriverWait(driver, Duration.ofSeconds(4))
+                    .until(ExpectedConditions.elementToBeClickable(signOutLocator));
+            try { new Actions(driver).moveToElement(signOutElement).click().perform(); }
+            catch (Exception e) { jsClick(signOutElement); }
+
+            new WebDriverWait(driver, Duration.ofSeconds(waitSeconds))
+                    .until(ExpectedConditions.or(
+                            ExpectedConditions.invisibilityOfElementLocated(userNameBy),
+                            ExpectedConditions.visibilityOfElementLocated(signInButtonBy)
+                    ));
+            return true;
+        } catch (Exception e) {
+            System.out.println("Logout attempt failed: " + e.getMessage());
+            return false;
+        }
+    }
+}
+
+
+SignInTest.java
+
+package org.example;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvFileSource;
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.jupiter.api.Assertions.fail;
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class SignInTest {
+
+    private WebDriver driver;
+    private SignIn signIn;
+
+    @BeforeAll
+    public void setUp() {
+        WebDriverManager.chromedriver().setup();
+        driver = new ChromeDriver();
+        driver.manage().window().setSize(new Dimension(1264, 798));
+        driver.get("https://www.greencity.cx.ua/#/ubs");
+        signIn = new SignIn(driver);
+    }
+
+    @AfterAll
+    public void tearDown() {
+        if (driver != null) driver.quit();
+    }
+
+    // Negative test
+    @Order(1)
+    @ParameterizedTest
+    @CsvFileSource(resources = "/negative_logins.csv", numLinesToSkip = 1)
+    public void testNegativeLogin(String email, String password, String expectedError) {
+        signIn.clickSignInButton();
+        assertThat(signIn.getWelcomeText(), is("Welcome back!"));
+
+        signIn.enterEmail(email);
+        signIn.enterPassword(password);
+        signIn.enterEmail(email);
+
+        String emailErr = signIn.getEmailError();
+        String passErr = signIn.getPasswordError();
+
+        if (emailErr != null && emailErr.contains(expectedError)) {
+            assertThat(emailErr, containsString(expectedError));
+        } else if (passErr != null && passErr.contains(expectedError)) {
+            assertThat(passErr, containsString(expectedError));
+        } else {
+            fail("Expected error not found.");
+        }
+
+        driver.navigate().refresh();
+    }
+
+    // Positive tests
+    @Order(2)
+    @ParameterizedTest
+    @CsvFileSource(resources = "/positive_logins.csv", numLinesToSkip = 1)
+    public void testPositiveLogin(String email, String password) {
+        signIn.clickSignInButton();
+        assertThat(signIn.getWelcomeText(), is("Welcome back!"));
+
+        signIn.enterEmail(email);
+        signIn.enterPassword(password);
+        signIn.clickSubmit();
+
+        assertThat(signIn.isUserLoggedIn(), is(true));
+        signIn.signOut();
+        assertThat(signIn.isUserLoggedIn(), is(false));
+
+        driver.navigate().refresh();
+    }
+}
+
+
+TestRunner.java
+
+package org.example;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+
+public class TestRunner {
+
+    protected static WebDriver driver;
+    protected static SignIn signIn;
+
+    @BeforeAll
+    public static void setUp() {
+        WebDriverManager.chromedriver().setup();
+        driver = new ChromeDriver();
+        driver.manage().window().setSize(new Dimension(1264, 798));
+        driver.get("https://www.greencity.cx.ua/#/ubs");
+        signIn = new SignIn(driver);
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        if (driver != null) driver.quit();
+    }
+}
+
+
+TestData.java
+
+package org.example;
+
+public class TestData {
+    private final String email;
+    private final String password;
+    private final String expectedError;
+
+    public TestData(String email, String password, String expectedError) {
+        this.email = email;
+        this.password = password;
+        this.expectedError = expectedError;
+    }
+
+    public TestData(String email, String password) {
+        this(email, password, null);
+    }
+
+    public String getEmail() { return email; }
+    public String getPassword() { return password; }
+    public String getExpectedError() { return expectedError; }
+}
