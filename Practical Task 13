@@ -93,7 +93,7 @@ pom.xml
 </project>
 
 
-SignIn.java (без змін)
+SignIn.java
 
 package org.example;
 
@@ -225,18 +225,13 @@ public class SignIn {
     }
 }
 
-
 SignInTest.java
 
 package org.example;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvFileSource;
-import org.openqa.selenium.Dimension;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -245,46 +240,35 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class SignInTest {
+public class SignInTest extends TestRunner {
 
-    private WebDriver driver;
-    private SignIn signIn;
+    private SignInActions actions;
 
     @BeforeAll
-    public void setUp() {
-        WebDriverManager.chromedriver().setup();
-        driver = new ChromeDriver();
-        driver.manage().window().setSize(new Dimension(1264, 798));
-        driver.get("https://www.greencity.cx.ua/#/ubs");
-        signIn = new SignIn(driver);
+    public void initActions() {
+        actions = new SignInActions(signIn);
     }
 
-    @AfterAll
-    public void tearDown() {
-        if (driver != null) driver.quit();
-    }
-
-    // Negative test
+    // Negative tests
     @Order(1)
     @ParameterizedTest
-    @CsvFileSource(resources = "/negative_logins.csv", numLinesToSkip = 1)
-    public void testNegativeLogin(String email, String password, String expectedError) {
-        signIn.clickSignInButton();
-        assertThat(signIn.getWelcomeText(), is("Welcome back!"));
+    @MethodSource("org.example.TestDataRepository#negativeTestData")
+    public void testNegativeLogin(TestData data) {
+        actions.openSignIn();
+        assertThat(actions.getWelcomeText(), is("Welcome back!"));
 
-        signIn.enterEmail(email);
-        signIn.enterPassword(password);
-        signIn.enterEmail(email);
+        ErrorResult res = actions.fillAndTriggerValidation(data);
 
-        String emailErr = signIn.getEmailError();
-        String passErr = signIn.getPasswordError();
+        String expected = data.getExpectedError();
+        String emailErr = res.getEmailError();
+        String passErr = res.getPasswordError();
 
-        if (emailErr != null && emailErr.contains(expectedError)) {
-            assertThat(emailErr, containsString(expectedError));
-        } else if (passErr != null && passErr.contains(expectedError)) {
-            assertThat(passErr, containsString(expectedError));
+        if (emailErr != null && emailErr.contains(expected)) {
+            assertThat(emailErr, containsString(expected));
+        } else if (passErr != null && passErr.contains(expected)) {
+            assertThat(passErr, containsString(expected));
         } else {
-            fail("Expected error not found.");
+            fail("Expected error not found. Expected: " + expected + " | emailErr: " + emailErr + " | passErr: " + passErr);
         }
 
         driver.navigate().refresh();
@@ -293,18 +277,16 @@ public class SignInTest {
     // Positive tests
     @Order(2)
     @ParameterizedTest
-    @CsvFileSource(resources = "/positive_logins.csv", numLinesToSkip = 1)
-    public void testPositiveLogin(String email, String password) {
-        signIn.clickSignInButton();
-        assertThat(signIn.getWelcomeText(), is("Welcome back!"));
+    @MethodSource("org.example.TestDataRepository#positiveTestData")
+    public void testPositiveLogin(TestData data) {
+        actions.openSignIn();
+        assertThat(actions.getWelcomeText(), is("Welcome back!"));
 
-        signIn.enterEmail(email);
-        signIn.enterPassword(password);
-        signIn.clickSubmit();
+        actions.login(data);
 
-        assertThat(signIn.isUserLoggedIn(), is(true));
-        signIn.signOut();
-        assertThat(signIn.isUserLoggedIn(), is(false));
+        assertThat(actions.isLoggedIn(), is(true));
+        actions.logout();
+        assertThat(actions.isLoggedIn(), is(false));
 
         driver.navigate().refresh();
     }
@@ -327,18 +309,97 @@ public class TestRunner {
     protected static WebDriver driver;
     protected static SignIn signIn;
 
+    protected static final String BASE_URL = "https://www.greencity.cx.ua/#/ubs";
+    protected static final Dimension WINDOW_SIZE = new Dimension(1264, 798);
+
     @BeforeAll
     public static void setUp() {
         WebDriverManager.chromedriver().setup();
         driver = new ChromeDriver();
-        driver.manage().window().setSize(new Dimension(1264, 798));
-        driver.get("https://www.greencity.cx.ua/#/ubs");
+        driver.manage().window().setSize(WINDOW_SIZE);
+        driver.get(BASE_URL);
         signIn = new SignIn(driver);
     }
 
     @AfterAll
     public static void tearDown() {
         if (driver != null) driver.quit();
+    }
+}
+
+
+SignInActions.java
+
+package org.example;
+
+public class SignInActions {
+
+    private final SignIn signIn;
+
+    public SignInActions(SignIn signIn) {
+        this.signIn = signIn;
+    }
+
+    public void openSignIn() {
+        signIn.clickSignInButton();
+    }
+
+    public String getWelcomeText() {
+        return signIn.getWelcomeText();
+    }
+
+    public ErrorResult fillAndTriggerValidation(TestData data) {
+        signIn.enterEmail(data.getEmail());
+        signIn.enterPassword(data.getPassword());
+        signIn.enterEmail(data.getEmail());
+
+        String emailErr = null;
+        String passErr = null;
+        try {
+            emailErr = signIn.getEmailError();
+        } catch (Exception ignored) {}
+        try {
+            passErr = signIn.getPasswordError();
+        } catch (Exception ignored) {}
+
+        return new ErrorResult(emailErr, passErr);
+    }
+
+    public void login(TestData data) {
+        signIn.enterEmail(data.getEmail());
+        signIn.enterPassword(data.getPassword());
+        signIn.clickSubmit();
+    }
+
+    public boolean isLoggedIn() {
+        return signIn.isUserLoggedIn();
+    }
+
+    public void logout() {
+        signIn.signOut();
+    }
+}
+
+
+ErrorResults.java
+
+package org.example;
+
+public class ErrorResult {
+    private final String emailError;
+    private final String passwordError;
+
+    public ErrorResult(String emailError, String passwordError) {
+        this.emailError = emailError;
+        this.passwordError = passwordError;
+    }
+
+    public String getEmailError() {
+        return emailError;
+    }
+
+    public String getPasswordError() {
+        return passwordError;
     }
 }
 
@@ -365,4 +426,64 @@ public class TestData {
     public String getEmail() { return email; }
     public String getPassword() { return password; }
     public String getExpectedError() { return expectedError; }
+}
+
+
+TestDataRepository.java
+
+package org.example;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class TestDataRepository {
+
+    public static Stream<TestData> negativeTestData() {
+        List<String> lines = readResourceLines("/negative_logins.csv");
+        return lines.stream()
+                .map(line -> parseCsvLine(line))
+                .filter(parts -> parts.length >= 3)
+                .map(parts -> new TestData(unquote(parts[0].trim()), unquote(parts[1].trim()), unquote(parts[2].trim())));
+    }
+
+    public static Stream<TestData> positiveTestData() {
+        List<String> lines = readResourceLines("/positive_logins.csv");
+        return lines.stream()
+                .map(line -> parseCsvLine(line))
+                .filter(parts -> parts.length >= 2)
+                .map(parts -> new TestData(unquote(parts[0].trim()), unquote(parts[1].trim())));
+    }
+
+    private static List<String> readResourceLines(String resourcePath) {
+        InputStream is = TestDataRepository.class.getResourceAsStream(resourcePath);
+        if (is == null) {
+            throw new RuntimeException("Resource not found: " + resourcePath);
+        }
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            return br.lines().skip(1).collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read resource: " + resourcePath, e);
+        }
+    }
+
+    private static String[] parseCsvLine(String line) {
+        String[] parts = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
+        return parts;
+    }
+
+    private static String unquote(String s) {
+        if (s == null) return null;
+        String res = s;
+        if ((res.startsWith("\"") && res.endsWith("\"")) || (res.startsWith("'") && res.endsWith("'"))) {
+            res = res.substring(1, res.length() - 1);
+        }
+        res = res.replaceAll("^[\"“”'’]+|[\"“”'’]+$", "");
+        return res.trim();
+    }
 }
