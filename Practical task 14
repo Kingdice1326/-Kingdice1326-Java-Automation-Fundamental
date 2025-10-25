@@ -1,0 +1,551 @@
+pom.xml не змінився
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.example</groupId>
+  <artifactId>selenium-tests</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <junit.jupiter.version>5.10.0</junit.jupiter.version>
+    <selenium.version>4.15.0</selenium.version>
+  </properties>
+
+  <dependencies>
+    <!-- Selenium -->
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>${selenium.version}</version>
+    </dependency>
+
+    <!-- WebDriverManager -->
+    <dependency>
+      <groupId>io.github.bonigarcia</groupId>
+      <artifactId>webdrivermanager</artifactId>
+      <version>5.5.3</version>
+    </dependency>
+
+    <!-- JUnit 5 -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Hamcrest -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>2.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- SLF4J -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.9</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <source>17</source>
+          <target>17</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.1.2</version>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+
+SignIn.java не змінився
+
+package org.example;
+
+import org.openqa.selenium.*;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import java.time.Duration;
+import java.util.List;
+
+public class SignIn {
+
+    private final WebDriver driver;
+    private final WebDriverWait wait;
+    private final JavascriptExecutor js;
+
+    private final By signInButtonBy = By.cssSelector("img.ubs-header-sing-in-img");
+    private final By welcomeTextBy = By.cssSelector("app-sign-in h1");
+    private final By emailBy = By.cssSelector("#email");
+    private final By passwordBy = By.cssSelector("#password");
+    private final By errorEmailBy = By.cssSelector("#email-err-msg div");
+    private final By errorPasswordBy = By.cssSelector("#pass-err-msg div");
+    private final By submitBy = By.cssSelector("button.ubsStyle[type='submit']");
+    private final By userNameBy = By.id("header_user-wrp");
+
+    public SignIn(WebDriver driver) {
+        this.driver = driver;
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.js = (JavascriptExecutor) driver;
+    }
+
+    private WebElement waitVisible(By locator) {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+    }
+
+    private WebElement waitClickable(By locator) {
+        return wait.until(ExpectedConditions.elementToBeClickable(locator));
+    }
+
+    private void jsClick(WebElement element) {
+        js.executeScript("arguments[0].click();", element);
+    }
+
+    public void clickSignInButton() {
+        List<WebElement> closeButtons = driver.findElements(By.cssSelector("a.close-modal-window"));
+        if (!closeButtons.isEmpty()) {
+            closeButtons.get(0).click();
+            new WebDriverWait(driver, Duration.ofSeconds(2))
+                    .until(ExpectedConditions.invisibilityOf(closeButtons.get(0)));
+        }
+        jsClick(waitClickable(signInButtonBy));
+    }
+
+    public String getWelcomeText() {
+        return waitVisible(welcomeTextBy).getText();
+    }
+
+    public void enterEmail(String email) {
+        WebElement input = waitVisible(emailBy);
+        jsClick(input);
+        input.clear();
+        input.sendKeys(email);
+    }
+
+    public void enterPassword(String password) {
+        WebElement input = waitVisible(passwordBy);
+        jsClick(input);
+        input.clear();
+        input.sendKeys(password);
+        waitVisible(emailBy).sendKeys(Keys.TAB);
+    }
+
+    public String getEmailError() {
+        return waitVisible(errorEmailBy).getText();
+    }
+
+    public String getPasswordError() {
+        return waitVisible(errorPasswordBy).getText();
+    }
+
+    public void clickSubmit() {
+        jsClick(waitClickable(submitBy));
+    }
+
+    public boolean isUserLoggedIn() {
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(3))
+                    .until(ExpectedConditions.visibilityOfElementLocated(userNameBy));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void signOut() {
+        WebElement userName = waitClickable(userNameBy);
+        try {
+            jsClick(userName);
+        } catch (Exception e) {
+            new Actions(driver).moveToElement(userName).click().perform();
+        }
+
+        By signOutLocator = By.cssSelector("li.drop-down-item[aria-label='sign-out']");
+        if (!attemptClickSignOut(signOutLocator, 8)) {
+            System.out.println("Retrying logout...");
+            try { jsClick(userName); } catch (Exception ignored) {}
+            attemptClickSignOut(signOutLocator, 8);
+        }
+    }
+
+    private boolean attemptClickSignOut(By signOutLocator, int waitSeconds) {
+        try {
+            WebElement signOutElement = new WebDriverWait(driver, Duration.ofSeconds(4))
+                    .until(ExpectedConditions.elementToBeClickable(signOutLocator));
+            try { new Actions(driver).moveToElement(signOutElement).click().perform(); }
+            catch (Exception e) { jsClick(signOutElement); }
+
+            new WebDriverWait(driver, Duration.ofSeconds(waitSeconds))
+                    .until(ExpectedConditions.or(
+                            ExpectedConditions.invisibilityOfElementLocated(userNameBy),
+                            ExpectedConditions.visibilityOfElementLocated(signInButtonBy)
+                    ));
+            return true;
+        } catch (Exception e) {
+            System.out.println("Logout attempt failed: " + e.getMessage());
+            return false;
+        }
+    }
+}
+
+SignInTest.java не змінився
+
+package org.example;
+
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.jupiter.api.Assertions.fail;
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class SignInTest extends TestRunner {
+
+    private SignInActions actions;
+
+    @BeforeAll
+    public void initActions() {
+        actions = new SignInActions(signIn);
+    }
+
+    // Negative tests
+    @Order(1)
+    @DisplayName("Negative test:")
+    @ParameterizedTest
+    @MethodSource("org.example.TestDataRepository#negativeTestData")
+    public void testNegativeLogin(TestData data) {
+        actions.openSignIn();
+        assertThat(actions.getWelcomeText(), is("Welcome back!"));
+
+        ErrorResult res = actions.fillAndTriggerValidation(data);
+
+        String expected = data.getExpectedError();
+        String emailErr = res.getEmailError();
+        String passErr = res.getPasswordError();
+
+        if (emailErr != null && emailErr.contains(expected)) {
+            assertThat(emailErr, containsString(expected));
+        } else if (passErr != null && passErr.contains(expected)) {
+            assertThat(passErr, containsString(expected));
+        } else {
+            fail("Expected error not found. Expected: " + expected + " | emailErr: " + emailErr + " | passErr: " + passErr);
+        }
+
+        driver.navigate().refresh();
+    }
+
+    // Positive tests
+    @Order(2)
+    @DisplayName("Positive test:")
+    @ParameterizedTest
+    @MethodSource("org.example.TestDataRepository#positiveTestData")
+    public void testPositiveLogin(TestData data) {
+        actions.openSignIn();
+        assertThat(actions.getWelcomeText(), is("Welcome back!"));
+
+        actions.login(data);
+
+        assertThat(actions.isLoggedIn(), is(true));
+        actions.logout();
+        assertThat(actions.isLoggedIn(), is(false));
+
+        driver.navigate().refresh();
+    }
+}
+
+TestRunner.java
+
+
+package org.example;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@ExtendWith(TestLoggerExtension.class)
+public class TestRunner {
+
+    protected static WebDriver driver;
+    protected static SignIn signIn;
+
+    protected static final String BASE_URL = "https://www.greencity.cx.ua/#/ubs";
+    protected static final Dimension WINDOW_SIZE = new Dimension(1264, 798);
+
+    private static final Logger logger = LoggerFactory.getLogger(TestRunner.class);
+
+    @BeforeAll
+    public static void setUp() {
+        logger.info("Setting up WebDriver and opening base URL: {}", BASE_URL);
+        WebDriverManager.chromedriver().setup();
+        driver = new ChromeDriver();
+        driver.manage().window().setSize(WINDOW_SIZE);
+        driver.get(BASE_URL);
+        signIn = new SignIn(driver);
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        logger.info("Tearing down WebDriver");
+        if (driver != null) driver.quit();
+    }
+}
+
+SignInActions.java не змінився
+
+package org.example;
+
+public class SignInActions {
+
+    private final SignIn signIn;
+
+    public SignInActions(SignIn signIn) {
+        this.signIn = signIn;
+    }
+
+    public void openSignIn() {
+        signIn.clickSignInButton();
+    }
+
+    public String getWelcomeText() {
+        return signIn.getWelcomeText();
+    }
+
+    public ErrorResult fillAndTriggerValidation(TestData data) {
+        signIn.enterEmail(data.getEmail());
+        signIn.enterPassword(data.getPassword());
+        signIn.enterEmail(data.getEmail());
+
+        String emailErr = null;
+        String passErr = null;
+        try {
+            emailErr = signIn.getEmailError();
+        } catch (Exception ignored) {}
+        try {
+            passErr = signIn.getPasswordError();
+        } catch (Exception ignored) {}
+
+        return new ErrorResult(emailErr, passErr);
+    }
+
+    public void login(TestData data) {
+        signIn.enterEmail(data.getEmail());
+        signIn.enterPassword(data.getPassword());
+        signIn.clickSubmit();
+    }
+
+    public boolean isLoggedIn() {
+        return signIn.isUserLoggedIn();
+    }
+
+    public void logout() {
+        signIn.signOut();
+    }
+}
+
+
+ErrorResult.java не змінився
+
+package org.example;
+
+public class ErrorResult {
+    private final String emailError;
+    private final String passwordError;
+
+    public ErrorResult(String emailError, String passwordError) {
+        this.emailError = emailError;
+        this.passwordError = passwordError;
+    }
+
+    public String getEmailError() {
+        return emailError;
+    }
+
+    public String getPasswordError() {
+        return passwordError;
+    }
+}
+
+TesData.java не змінився
+
+package org.example;
+
+public class TestData {
+    private final String email;
+    private final String password;
+    private final String expectedError;
+
+    public TestData(String email, String password, String expectedError) {
+        this.email = email;
+        this.password = password;
+        this.expectedError = expectedError;
+    }
+
+    public TestData(String email, String password) {
+        this(email, password, null);
+    }
+
+    public String getEmail() { return email; }
+    public String getPassword() { return password; }
+    public String getExpectedError() { return expectedError; }
+}
+
+TestDataRepository.java не змінився
+
+package org.example;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class TestDataRepository {
+
+    public static Stream<TestData> negativeTestData() {
+        List<String> lines = readResourceLines("/negative_logins.csv");
+        return lines.stream()
+                .map(line -> parseCsvLine(line))
+                .filter(parts -> parts.length >= 3)
+                .map(parts -> new TestData(unquote(parts[0].trim()), unquote(parts[1].trim()), unquote(parts[2].trim())));
+    }
+
+    public static Stream<TestData> positiveTestData() {
+        List<String> lines = readResourceLines("/positive_logins.csv");
+        return lines.stream()
+                .map(line -> parseCsvLine(line))
+                .filter(parts -> parts.length >= 2)
+                .map(parts -> new TestData(unquote(parts[0].trim()), unquote(parts[1].trim())));
+    }
+
+    private static List<String> readResourceLines(String resourcePath) {
+        InputStream is = TestDataRepository.class.getResourceAsStream(resourcePath);
+        if (is == null) {
+            throw new RuntimeException("Resource not found: " + resourcePath);
+        }
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            return br.lines().skip(1).collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read resource: " + resourcePath, e);
+        }
+    }
+
+    private static String[] parseCsvLine(String line) {
+        String[] parts = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
+        return parts;
+    }
+
+    private static String unquote(String s) {
+        if (s == null) return null;
+        String res = s;
+        if ((res.startsWith("\"") && res.endsWith("\"")) || (res.startsWith("'") && res.endsWith("'"))) {
+            res = res.substring(1, res.length() - 1);
+        }
+        res = res.replaceAll("^[\"“”'’]+|[\"“”'’]+$", "");
+        return res.trim();
+    }
+}
+
+TestLoggerExtension.java
+
+package org.example;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.extension.*;
+
+import java.util.Optional;
+
+public class TestLoggerExtension implements TestWatcher, BeforeTestExecutionCallback {
+
+    @Override
+    public void beforeTestExecution(ExtensionContext context) throws Exception {
+        Logger log = LoggerFactory.getLogger(context.getRequiredTestClass());
+        String displayName = context.getDisplayName();
+        String className = context.getRequiredTestClass().getSimpleName();
+        String methodName = context.getRequiredTestMethod().getName();
+        log.info("STARTING test: {}#{} ({})", className, methodName, displayName);
+    }
+
+    @Override
+    public void testSuccessful(ExtensionContext context) {
+        Logger log = LoggerFactory.getLogger(context.getRequiredTestClass());
+        String className = context.getRequiredTestClass().getSimpleName();
+        String methodName = context.getRequiredTestMethod().getName();
+        log.info("TEST PASSED: {}#{}", className, methodName);
+    }
+
+    @Override
+    public void testFailed(ExtensionContext context, Throwable cause) {
+        Logger log = LoggerFactory.getLogger(context.getRequiredTestClass());
+        String className = context.getRequiredTestClass().getSimpleName();
+        String methodName = context.getRequiredTestMethod().getName();
+        log.error("TEST FAILED: {}#{} — {}", className, methodName, cause == null ? "no exception" : cause.toString(), cause);
+    }
+
+    @Override
+    public void testAborted(ExtensionContext context, Throwable cause) {
+        Logger log = LoggerFactory.getLogger(context.getRequiredTestClass());
+        String className = context.getRequiredTestClass().getSimpleName();
+        String methodName = context.getRequiredTestMethod().getName();
+        log.warn("TEST ABORTED: {}#{} — {}", className, methodName, cause == null ? "no exception" : cause.toString());
+    }
+
+    @Override
+    public void testDisabled(ExtensionContext context, Optional<String> reason) {
+        Logger log = LoggerFactory.getLogger(context.getRequiredTestClass());
+        String className = context.getRequiredTestClass().getSimpleName();
+        String display = context.getDisplayName();
+        log.info("TEST DISABLED: {} — {} (reason: {})", className, display, reason.orElse("none"));
+    }
+}
+
+
